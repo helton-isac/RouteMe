@@ -16,21 +16,26 @@
         map:layout_constraintTop_toTopOf="parent"
         tools:context=".ui.maps.MapsActivity" />
 
-    <EditText
-        android:id="@+id/tvSearch"
-        style="@style/search_edit_text"
-        android:layout_width="0dp"
+
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginTop="48dp"
         android:layout_marginEnd="16dp"
-        android:autofillHints="postalAddress"
-        android:ems="10"
-        android:hint="@string/search_place"
-        android:inputType="textPersonName"
-        android:textSize="24sp"
+        map:cardBackgroundColor="@color/white"
+        map:layout_constraintBottom_toBottomOf="parent"
         map:layout_constraintEnd_toEndOf="parent"
         map:layout_constraintStart_toStartOf="parent"
-        map:layout_constraintTop_toTopOf="@+id/map" />
+        map:layout_constraintTop_toTopOf="@+id/map"
+        map:layout_constraintVertical_bias="0.0">
+
+
+        <fragment
+            android:id="@+id/autocomplete_fragment"
+            android:name="com.google.android.libraries.places.widget.AutocompleteSupportFragment"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+    </androidx.cardview.widget.CardView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
