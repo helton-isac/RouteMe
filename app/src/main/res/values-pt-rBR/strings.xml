@@ -8,4 +8,8 @@
     <string name="error_invalid_locations">Locais inválidos para processar a rota.</string>
     <string name="error_routing_failure">Falha ao processar a rota.</string>
     <string name="error_routing_cancelled">O processamento da rota foi cancelado.</string>
+    <string name="error_selecting_place">Erro ao selecionar um local.</string>
+    <string name="error_obtaining_current_location">erro ao obter a localização atual</string>
+    <string name="warning">Atenção</string>
+    <string name="warning_needs_location_permission">O aplicativo precisa de acesso ao seu local para calcular a sua rota.</string>
 </resources>

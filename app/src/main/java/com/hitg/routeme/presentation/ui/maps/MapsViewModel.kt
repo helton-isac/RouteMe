@@ -18,8 +18,11 @@ class MapsViewModel(
     }
 
     fun findRouteTo(endPosition: LatLng?) {
-        if (deviceLocation.value == null || endPosition == null) {
+        if (endPosition == null) {
             mapsState.value = MapsState.ErrorMessage(MapsMessageCode.ERROR_INVALID_LOCATION)
+            return
+        } else if (deviceLocation.value == null) {
+            mapsState.value = MapsState.ErrorMessage(MapsMessageCode.ERROR_NO_START_LOCATION)
             return
         }
         val routing: Routing = Routing.Builder()

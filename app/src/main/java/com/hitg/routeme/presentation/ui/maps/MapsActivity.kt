@@ -3,7 +3,6 @@ package com.hitg.routeme.presentation.ui.maps
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -35,8 +34,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     private var locationPermissionGranted = false
     private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
 
-    private val defaultLocation = LatLng(-23.550231183321824, -46.63392195099466)
-
     private var polylines: MutableList<Polyline>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,7 +47,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         initializeMap()
 
-        initializeMyLocation()
+        initializeMyLocationButton()
 
         initializeViewModel()
     }
@@ -63,7 +60,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         ).get(MapsViewModel::class.java)
 
         mapsViewModel.deviceLocation.observe(this, {
-            progressBar.visibility = View.GONE
+            hideLoading()
             map.animateCamera(
                 CameraUpdateFactory.newLatLngZoom(
                     it, DEFAULT_ZOOM.toFloat()
@@ -72,7 +69,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         })
 
         mapsViewModel.mapsState.observe(this, { mapsState ->
-            progressBar.visibility = View.GONE
+            hideLoading()
             when (mapsState) {
                 is MapsState.Loading -> {
                     showLoading()
@@ -85,11 +82,16 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                     )
                 }
                 is MapsState.ErrorMessage -> {
-                    DialogUtils.showSimpleDialog(
-                        this,
-                        resources.getString(R.string.error),
-                        mapsState.messageCode.getTranslation(resources)
-                    )
+
+                    if (mapsState.messageCode == MapsMessageCode.ERROR_NO_START_LOCATION) {
+                        getLocationPermission()
+                    } else {
+                        DialogUtils.showSimpleDialog(
+                            this,
+                            resources.getString(R.string.error),
+                            mapsState.messageCode.getTranslation(resources)
+                        )
+                    }
                 }
                 is MapsState.Success -> {
                     drawRoute(mapsState.data)
@@ -103,6 +105,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         progressBar.visibility = View.VISIBLE
     }
 
+    private fun hideLoading() {
+        progressBar.visibility = View.GONE
+    }
+
     private fun initializeFusedLocationProviderClient() {
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
     }
@@ -111,7 +117,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         Places.initialize(applicationContext, resources.getString(R.string.google_maps_key))
     }
 
-    private fun initializeMyLocation() {
+    private fun initializeMyLocationButton() {
         ivMyLocation.visibility = View.GONE
         ivMyLocation.setOnClickListener {
             getDeviceLocation()
@@ -129,8 +135,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             supportFragmentManager.findFragmentById(R.id.autocomplete_fragment)
                     as AutocompleteSupportFragment
 
-
-        // Specify the types of place data to return.
         autocompleteFragment.setPlaceFields(
             listOf(
                 Place.Field.ID,
@@ -142,7 +146,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         autocompleteFragment.setHint(resources.getString(R.string.search_place))
 
-        // Set up a PlaceSelectionListener to handle the response.
         autocompleteFragment.setOnPlaceSelectedListener(object : PlaceSelectionListener {
             override fun onPlaceSelected(place: Place) {
                 map.clear()
@@ -153,9 +156,12 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                     map.addMarker(marker)
 
                     val builder = LatLngBounds.Builder()
-
                     builder.include(marker.position)
-                    builder.include(mapsViewModel.deviceLocation.value)
+
+                    val lastKnowLocation = mapsViewModel.deviceLocation.value
+                    if (lastKnowLocation != null) {
+                        builder.include(lastKnowLocation)
+                    }
 
                     val bounds = builder.build()
                     val padding = 100
@@ -167,22 +173,21 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             }
 
             override fun onError(status: Status) {
-                Log.i(TAG, "An error occurred: $status")
+                DialogUtils.showSimpleDialog(
+                    this@MapsActivity,
+                    resources.getString(R.string.error),
+                    resources.getString(R.string.error_selecting_place) +
+                            "$status"
+                )
             }
         })
-
-
     }
-
 
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
         map.uiSettings?.isMyLocationButtonEnabled = false
         initializeAutocompleteFragment()
-        if (getLocationPermission()) {
-            updateLocationUI()
-            getDeviceLocation()
-        }
+        getLocationPermission()
     }
 
     private fun updateLocationUI() {
@@ -193,11 +198,13 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                 ivMyLocation.visibility = View.VISIBLE
             } else {
                 map.isMyLocationEnabled = false
-                mapsViewModel.deviceLocation
-                getLocationPermission()
             }
         } catch (e: SecurityException) {
-            Log.e("Exception: %s", e.message, e)
+            DialogUtils.showSimpleDialog(
+                this,
+                resources.getString(R.string.error),
+                resources.getString(R.string.error_obtaining_current_location)
+            )
         }
     }
 
@@ -208,42 +215,45 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                 locationResult.addOnCompleteListener(this) { task ->
                     if (task.isSuccessful) {
                         val result = task.result
-
                         if (result != null) {
                             val latitude = result.latitude
                             val longitude = result.longitude
                             mapsViewModel.persistDeviceLocation(LatLng(latitude, longitude))
-
                         }
                     } else {
-                        Log.d(TAG, "Current location is null. Using defaults.")
-                        Log.e(TAG, "Exception: %s", task.exception)
-                        map.moveCamera(
-                            CameraUpdateFactory
-                                .newLatLngZoom(defaultLocation, DEFAULT_ZOOM.toFloat())
+                        DialogUtils.showSimpleDialog(
+                            this,
+                            resources.getString(R.string.error),
+                            resources.getString(R.string.error_obtaining_current_location)
                         )
                     }
                 }
             }
         } catch (e: SecurityException) {
-            Log.e("Exception: %s", e.message, e)
+            DialogUtils.showSimpleDialog(
+                this,
+                resources.getString(R.string.error),
+                resources.getString(R.string.error_obtaining_current_location)
+            )
         }
     }
 
-    private fun getLocationPermission(): Boolean {
+    private fun getLocationPermission() {
         if (ContextCompat.checkSelfPermission(
                 this.applicationContext,
                 Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED
         ) {
             locationPermissionGranted = true
+            updateLocationUI()
         } else {
+            locationPermissionGranted = false
+            updateLocationUI()
             ActivityCompat.requestPermissions(
                 this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
                 PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION
             )
         }
-        return locationPermissionGranted
     }
 
     override fun onRequestPermissionsResult(
@@ -252,22 +262,28 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         grantResults: IntArray
     ) {
         locationPermissionGranted = false
+
+        hideLoading()
+
         when (requestCode) {
             PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION -> {
-
-
                 if (grantResults.isNotEmpty() &&
                     grantResults[0] == PackageManager.PERMISSION_GRANTED
                 ) {
                     locationPermissionGranted = true
+                    updateLocationUI()
+                } else {
+                    DialogUtils.showSimpleDialog(
+                        this, resources.getString(R.string.warning),
+                        resources.getString(R.string.warning_needs_location_permission)
+                    )
                 }
             }
         }
-        updateLocationUI()
+
     }
 
     companion object {
-        private val TAG = MapsActivity::class.java.simpleName
         private const val DEFAULT_ZOOM = 15
         private const val PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1
     }

@@ -7,4 +7,8 @@
     <string name="error_invalid_locations">Invalid Locations to process the route.</string>
     <string name="error_routing_failure">Failed processing the Route.</string>
     <string name="error_routing_cancelled">The routing process was cancelled.</string>
+    <string name="error_selecting_place">Error selecting a place.</string>
+    <string name="error_obtaining_current_location">Error obtaining the current location.</string>
+    <string name="warning">Warning</string>
+    <string name="warning_needs_location_permission">The application needs access to your location to calculate your route.</string>
 </resources>
