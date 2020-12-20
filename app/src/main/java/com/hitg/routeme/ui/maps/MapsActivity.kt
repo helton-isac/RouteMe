@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -23,12 +24,14 @@ import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener
 import com.hitg.routeme.R
+import kotlinx.android.synthetic.main.activity_maps.*
 import java.util.*
 
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback, RoutingListener {
 
     private lateinit var map: GoogleMap
+
     private var cameraPosition: CameraPosition? = null
 
     private var locationPermissionGranted = false
@@ -56,6 +59,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, RoutingListener {
         val mapFragment = supportFragmentManager
             .findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
+        ivMyLocation.visibility = View.GONE
+        ivMyLocation.setOnClickListener {
+            getDeviceLocation()
+        }
 
         Places.initialize(applicationContext, resources.getString(R.string.google_maps_key))
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
@@ -133,6 +140,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, RoutingListener {
             if (locationPermissionGranted) {
                 map.isMyLocationEnabled = true
                 getDeviceLocation()
+                ivMyLocation.visibility = View.VISIBLE
             } else {
                 map.isMyLocationEnabled = false
                 lastKnownLocation = null
@@ -156,7 +164,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, RoutingListener {
                             if (latitude != null && longitude != null) {
                                 start = LatLng(latitude, longitude)
                             }
-                            map.moveCamera(
+                            map.animateCamera(
                                 CameraUpdateFactory.newLatLngZoom(
                                     LatLng(
                                         lastKnownLocation!!.latitude,
@@ -227,6 +235,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, RoutingListener {
                 .waypoints(Start, End)
                 .key(resources.getString(R.string.google_maps_key))
                 .build()
+            @Suppress("DEPRECATION")
             routing.execute()
         }
     }

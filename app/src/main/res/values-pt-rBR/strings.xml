@@ -2,4 +2,5 @@
 <resources>
     <string name="app_name">Route Me</string>
     <string name="search_place">Pesquisar Aqui</string>
+    <string name="my_location">Minha Localização</string>
 </resources>
