@@ -44,9 +44,7 @@ class MapsViewModel(
         mapsState.value = MapsState.Loading
     }
 
-
     override fun onRoutingSuccess(route: ArrayList<Route>, shortestRouteIndex: Int) {
-
         for (i in route.indices) {
             if (i == shortestRouteIndex) {
                 mapsState.value = MapsState.Success(route[shortestRouteIndex].points)
@@ -57,5 +55,4 @@ class MapsViewModel(
     override fun onRoutingCancelled() {
         mapsState.value = MapsState.ErrorMessage(MapsMessageCode.ERROR_ROUTING_CANCELLED)
     }
-
 }

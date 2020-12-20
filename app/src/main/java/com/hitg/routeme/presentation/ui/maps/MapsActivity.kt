@@ -28,12 +28,9 @@ import kotlinx.android.synthetic.main.activity_maps.*
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var mapsViewModel: MapsViewModel
-
     private lateinit var map: GoogleMap
-
     private var locationPermissionGranted = false
     private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
-
     private var polylines: MutableList<Polyline>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -173,12 +170,14 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             }
 
             override fun onError(status: Status) {
-                DialogUtils.showSimpleDialog(
-                    this@MapsActivity,
-                    resources.getString(R.string.error),
-                    resources.getString(R.string.error_selecting_place) +
-                            "$status"
-                )
+                if (status != Status.RESULT_CANCELED) {
+                    DialogUtils.showSimpleDialog(
+                        this@MapsActivity,
+                        resources.getString(R.string.error),
+                        resources.getString(R.string.error_selecting_place) +
+                                "$status"
+                    )
+                }
             }
         })
     }
@@ -283,12 +282,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     }
 
-    companion object {
-        private const val DEFAULT_ZOOM = 15
-        private const val PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1
-    }
-
-
     private fun drawRoute(points: List<LatLng>) {
         polylines?.clear()
         val builder = LatLngBounds.Builder()
@@ -308,6 +301,11 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         val padding = 100
         val cu = CameraUpdateFactory.newLatLngBounds(bounds, padding)
         map.animateCamera(cu)
+    }
+
+    companion object {
+        private const val DEFAULT_ZOOM = 15
+        private const val PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1
     }
 
 }
