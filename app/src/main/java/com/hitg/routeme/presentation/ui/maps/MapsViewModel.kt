@@ -1,9 +1,9 @@
-package com.hitg.routeme.ui.maps
+package com.hitg.routeme.presentation.ui.maps
 
 import androidx.lifecycle.MutableLiveData
 import com.directions.route.*
 import com.google.android.gms.maps.model.LatLng
-import com.hitg.routeme.viewmodel.BaseViewModel
+import com.hitg.routeme.presentation.viewmodel.BaseViewModel
 import java.util.*
 
 class MapsViewModel(

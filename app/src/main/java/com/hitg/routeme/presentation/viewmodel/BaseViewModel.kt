@@ -1,4 +1,4 @@
-package com.hitg.routeme.viewmodel
+package com.hitg.routeme.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 

@@ -1,4 +1,4 @@
-package com.hitg.routeme.ui.maps
+package com.hitg.routeme.presentation.ui.maps
 
 sealed class MapsState<out T> {
     object Loading : MapsState<Nothing>()

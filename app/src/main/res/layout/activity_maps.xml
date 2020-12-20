@@ -17,7 +17,7 @@
         map:layout_constraintStart_toStartOf="parent"
         map:layout_constraintTop_toTopOf="parent"
         map:layout_constraintVertical_bias="0.0"
-        tools:context=".ui.maps.MapsActivity" />
+        tools:context=".presentation.ui.maps.MapsActivity" />
 
     <ImageView
         android:id="@+id/ivGradientBackground"

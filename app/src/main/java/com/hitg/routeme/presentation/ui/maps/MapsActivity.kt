@@ -1,4 +1,4 @@
-package com.hitg.routeme.ui.maps
+package com.hitg.routeme.presentation.ui.maps
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -22,7 +22,7 @@ import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener
 import com.hitg.routeme.R
-import com.hitg.routeme.utils.DialogUtils
+import com.hitg.routeme.presentation.utils.DialogUtils
 import kotlinx.android.synthetic.main.activity_maps.*
 
 

@@ -1,4 +1,4 @@
-package com.hitg.routeme.utils
+package com.hitg.routeme.presentation.utils
 
 import android.content.Context
 import android.content.DialogInterface

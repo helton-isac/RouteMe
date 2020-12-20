@@ -1,4 +1,4 @@
-package com.hitg.routeme.ui.maps
+package com.hitg.routeme.presentation.ui.maps
 
 import android.content.res.Resources
 import com.hitg.routeme.R

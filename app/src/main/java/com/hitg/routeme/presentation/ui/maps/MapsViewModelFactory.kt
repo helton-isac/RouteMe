@@ -1,4 +1,4 @@
-package com.hitg.routeme.ui.maps
+package com.hitg.routeme.presentation.ui.maps
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
