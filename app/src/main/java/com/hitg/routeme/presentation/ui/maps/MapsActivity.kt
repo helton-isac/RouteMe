@@ -63,6 +63,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         ).get(MapsViewModel::class.java)
 
         mapsViewModel.deviceLocation.observe(this, {
+            progressBar.visibility = View.GONE
             map.animateCamera(
                 CameraUpdateFactory.newLatLngZoom(
                     it, DEFAULT_ZOOM.toFloat()
@@ -71,6 +72,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         })
 
         mapsViewModel.mapsState.observe(this, { mapsState ->
+            progressBar.visibility = View.GONE
             when (mapsState) {
                 is MapsState.Loading -> {
                     showLoading()
@@ -98,7 +100,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun showLoading() {
-        // TODO: Show Loading
+        progressBar.visibility = View.VISIBLE
     }
 
     private fun initializeFusedLocationProviderClient() {

@@ -4,7 +4,7 @@
     <string name="search_place">Pesquisar Aqui</string>
     <string name="my_location">Minha Localização</string>
     <string name="error">Erro</string>
-    <string name="ops">Desculpe, erro não identificado.</string>
+    <string name="ops">Não foi possível processar a sua rota.</string>
     <string name="error_invalid_locations">Locais inválidos para processar a rota.</string>
     <string name="error_routing_failure">Falha ao processar a rota.</string>
     <string name="error_routing_cancelled">O processamento da rota foi cancelado.</string>
