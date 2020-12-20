@@ -2,4 +2,9 @@
     <string name="app_name">Route Me</string>
     <string name="search_place">Search Here</string>
     <string name="my_location">My Location</string>
+    <string name="error">Error</string>
+    <string name="ops">Sorry, undefined error.</string>
+    <string name="error_invalid_locations">Invalid Locations to process the route.</string>
+    <string name="error_routing_failure">Failed processing the Route.</string>
+    <string name="error_routing_cancelled">The routing process was cancelled.</string>
 </resources>

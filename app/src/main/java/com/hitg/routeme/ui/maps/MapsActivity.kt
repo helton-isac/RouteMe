@@ -2,15 +2,13 @@ package com.hitg.routeme.ui.maps
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.location.Location
 import android.os.Bundle
 import android.util.Log
 import android.view.View
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.directions.route.*
+import androidx.lifecycle.ViewModelProvider
 import com.google.android.gms.common.api.Status
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
@@ -24,48 +22,104 @@ import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener
 import com.hitg.routeme.R
+import com.hitg.routeme.utils.DialogUtils
 import kotlinx.android.synthetic.main.activity_maps.*
-import java.util.*
 
 
-class MapsActivity : AppCompatActivity(), OnMapReadyCallback, RoutingListener {
+class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
+
+    private lateinit var mapsViewModel: MapsViewModel
 
     private lateinit var map: GoogleMap
 
-    private var cameraPosition: CameraPosition? = null
-
     private var locationPermissionGranted = false
     private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
-    private var lastKnownLocation: Location? = null
+
     private val defaultLocation = LatLng(-23.550231183321824, -46.63392195099466)
 
-    private var start: LatLng? = null
-    private var end: LatLng? = null
+    private var polylines: MutableList<Polyline>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (savedInstanceState != null) {
-            lastKnownLocation = savedInstanceState.getParcelable(KEY_LOCATION)
-            val latitude = lastKnownLocation?.latitude
-            val longitude = lastKnownLocation?.longitude
-            if (latitude != null && longitude != null) {
-                start = LatLng(latitude, longitude)
-            }
-            cameraPosition = savedInstanceState.getParcelable(KEY_CAMERA_POSITION)
-        }
-
         setContentView(R.layout.activity_maps)
-        val mapFragment = supportFragmentManager
-            .findFragmentById(R.id.map) as SupportMapFragment
-        mapFragment.getMapAsync(this)
+
+        initializePlaces()
+
+        initializeFusedLocationProviderClient()
+
+        initializeMap()
+
+        initializeMyLocation()
+
+        initializeViewModel()
+    }
+
+    private fun initializeViewModel() {
+
+        mapsViewModel = ViewModelProvider(
+            this,
+            MapsViewModelFactory(resources.getString(R.string.google_maps_key))
+        ).get(MapsViewModel::class.java)
+
+        mapsViewModel.deviceLocation.observe(this, {
+            map.animateCamera(
+                CameraUpdateFactory.newLatLngZoom(
+                    it, DEFAULT_ZOOM.toFloat()
+                )
+            )
+        })
+
+        mapsViewModel.mapsState.observe(this, { mapsState ->
+            when (mapsState) {
+                is MapsState.Loading -> {
+                    showLoading()
+                }
+                is MapsState.Error -> {
+                    DialogUtils.showSimpleDialog(
+                        this,
+                        resources.getString(R.string.error),
+                        mapsState.throwable.message ?: resources.getString(R.string.ops)
+                    )
+                }
+                is MapsState.ErrorMessage -> {
+                    DialogUtils.showSimpleDialog(
+                        this,
+                        resources.getString(R.string.error),
+                        mapsState.messageCode.getTranslation(resources)
+                    )
+                }
+                is MapsState.Success -> {
+                    drawRoute(mapsState.data)
+                }
+            }
+        })
+
+    }
+
+    private fun showLoading() {
+        // TODO: Show Loading
+    }
+
+    private fun initializeFusedLocationProviderClient() {
+        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
+    }
+
+    private fun initializePlaces() {
+        Places.initialize(applicationContext, resources.getString(R.string.google_maps_key))
+    }
+
+    private fun initializeMyLocation() {
         ivMyLocation.visibility = View.GONE
         ivMyLocation.setOnClickListener {
             getDeviceLocation()
         }
+    }
 
-        Places.initialize(applicationContext, resources.getString(R.string.google_maps_key))
-        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
+    private fun initializeMap() {
+        val mapFragment = supportFragmentManager
+            .findFragmentById(R.id.map) as SupportMapFragment
+        mapFragment.getMapAsync(this)
     }
 
     private fun initializeAutocompleteFragment() {
@@ -93,26 +147,20 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, RoutingListener {
                 val latLng = place.latLng
 
                 if (latLng != null) {
-                    end = latLng
                     val marker = MarkerOptions().position(latLng).title(place.name)
                     map.addMarker(marker)
 
                     val builder = LatLngBounds.Builder()
 
                     builder.include(marker.position)
+                    builder.include(mapsViewModel.deviceLocation.value)
 
-                    val deviceLatitude = lastKnownLocation?.latitude
-                    val deviceLongitude = lastKnownLocation?.longitude
-
-                    if (deviceLatitude != null && deviceLongitude != null) {
-                        builder.include(LatLng(deviceLatitude, deviceLongitude))
-                    }
                     val bounds = builder.build()
                     val padding = 100
-                    val cu = CameraUpdateFactory.newLatLngBounds(bounds, padding)
+                    val cameraUpdate = CameraUpdateFactory.newLatLngBounds(bounds, padding)
 
-                    map.animateCamera(cu)
-                    findRoutes(start, end)
+                    map.animateCamera(cameraUpdate)
+                    mapsViewModel.findRouteTo(latLng)
                 }
             }
 
@@ -143,7 +191,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, RoutingListener {
                 ivMyLocation.visibility = View.VISIBLE
             } else {
                 map.isMyLocationEnabled = false
-                lastKnownLocation = null
+                mapsViewModel.deviceLocation
                 getLocationPermission()
             }
         } catch (e: SecurityException) {
@@ -157,21 +205,13 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, RoutingListener {
                 val locationResult = fusedLocationProviderClient.lastLocation
                 locationResult.addOnCompleteListener(this) { task ->
                     if (task.isSuccessful) {
-                        lastKnownLocation = task.result
-                        if (lastKnownLocation != null) {
-                            val latitude = lastKnownLocation?.latitude
-                            val longitude = lastKnownLocation?.longitude
-                            if (latitude != null && longitude != null) {
-                                start = LatLng(latitude, longitude)
-                            }
-                            map.animateCamera(
-                                CameraUpdateFactory.newLatLngZoom(
-                                    LatLng(
-                                        lastKnownLocation!!.latitude,
-                                        lastKnownLocation!!.longitude
-                                    ), DEFAULT_ZOOM.toFloat()
-                                )
-                            )
+                        val result = task.result
+
+                        if (result != null) {
+                            val latitude = result.latitude
+                            val longitude = result.longitude
+                            mapsViewModel.persistDeviceLocation(LatLng(latitude, longitude))
+
                         }
                     } else {
                         Log.d(TAG, "Current location is null. Using defaults.")
@@ -224,65 +264,32 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, RoutingListener {
         updateLocationUI()
     }
 
-    fun findRoutes(Start: LatLng?, End: LatLng?) {
-        if (Start == null || End == null) {
-            Toast.makeText(this, "Unable to get location", Toast.LENGTH_LONG).show()
-        } else {
-            val routing: Routing = Routing.Builder()
-                .travelMode(AbstractRouting.TravelMode.DRIVING)
-                .withListener(this)
-                .alternativeRoutes(false)
-                .waypoints(Start, End)
-                .key(resources.getString(R.string.google_maps_key))
-                .build()
-            @Suppress("DEPRECATION")
-            routing.execute()
-        }
-    }
-
     companion object {
         private val TAG = MapsActivity::class.java.simpleName
         private const val DEFAULT_ZOOM = 15
         private const val PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1
-        private const val KEY_CAMERA_POSITION = "camera_position"
-        private const val KEY_LOCATION = "location"
     }
 
-    override fun onRoutingFailure(e: RouteException) {
-        Log.e(TAG, "onRoutingFailure: ${e.message}")
-    }
 
-    override fun onRoutingStart() {
-        Log.i(TAG, "onRoutingStart")
-    }
-
-    private var polylines: MutableList<Polyline>? = null
-
-    override fun onRoutingSuccess(route: ArrayList<Route>, shortestRouteIndex: Int) {
+    private fun drawRoute(points: List<LatLng>) {
         polylines?.clear()
         val builder = LatLngBounds.Builder()
         val polyOptions = PolylineOptions()
         polylines = mutableListOf()
-        for (i in route.indices) {
-            if (i == shortestRouteIndex) {
-                polyOptions.color(ContextCompat.getColor(this, R.color.purple_700))
-                polyOptions.width(7f)
-                polyOptions.addAll(route[shortestRouteIndex].points)
-                val polyline: Polyline = map.addPolyline(polyOptions)
-                polylines?.add(polyline)
 
-                for (point in route[shortestRouteIndex].points) {
-                    builder.include(point)
-                }
-                val bounds = builder.build()
-                val padding = 100
-                val cu = CameraUpdateFactory.newLatLngBounds(bounds, padding)
-                map.animateCamera(cu)
-            }
+        polyOptions.color(ContextCompat.getColor(this, R.color.purple_700))
+        polyOptions.width(7f)
+        polyOptions.addAll(points)
+        val polyline: Polyline = map.addPolyline(polyOptions)
+        polylines?.add(polyline)
+
+        for (point in points) {
+            builder.include(point)
         }
+        val bounds = builder.build()
+        val padding = 100
+        val cu = CameraUpdateFactory.newLatLngBounds(bounds, padding)
+        map.animateCamera(cu)
     }
 
-    override fun onRoutingCancelled() {
-        Log.i(TAG, "onRoutingCancelled")
-    }
 }
