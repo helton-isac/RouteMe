@@ -41,9 +41,7 @@ The directions API is not intented to be used like in this app, it must be consu
 
 ## Images
 
-<img src="./readme_assets/masp_gif.gif" width=150>
-<img src="./readme_assets/route.png" width=150>
-<img src="./readme_assets/Searching.png" width=150>
+| <img src="./readme_assets/masp_gif.gif" width=200> | <img src="./readme_assets/route.png" width=200> | <img src="./readme_assets/Searching.png" width=200> |
 
 ## Missing
 
